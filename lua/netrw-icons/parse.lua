@@ -1,3 +1,11 @@
+-- SPDX-License-Identifier: MIT
+--
+-- Copyright (c) 2026 Mikołaj Kozłowski
+--
+-- Portions of this file are derived from:
+-- prichrd/netrw.nvim (MIT)
+-- https://github.com/prichrd/netrw.nvim
+
 local M = {}
 
 M.TYPE_DIR = 0

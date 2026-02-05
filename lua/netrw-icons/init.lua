@@ -1,3 +1,11 @@
+-- SPDX-License-Identifier: MIT
+--
+-- Copyright (c) 2026 Mikołaj Kozłowski
+--
+-- Portions of this file are derived from:
+-- prichrd/netrw.nvim (MIT)
+-- https://github.com/prichrd/netrw.nvim
+
 local M = {}
 local parse = require("netrw.parse")
 
@@ -115,9 +123,19 @@ M.options = {}
 
 --- @class Config
 local default = {
-	prefer = nil, -- "miniicons" or "devicons"
+	-- Preferred icon provider:
+	-- nil         -> auto-detect
+	-- "miniicons" -> use mini.icons
+	-- "devicons"  -> use nvim-web-devicons
+	prefer = nil,
+
+	-- Show icons for files
 	file = true,
+
+	-- Show icons for directories
 	dir = true,
+
+	-- LSP diagnostics integration
 	lsp = {
 		info = false,
 		hint = false,
