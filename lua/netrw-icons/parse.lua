@@ -136,74 +136,10 @@ local parse_liststyle_3 = function(line)
 	return {
 		name = link_target or content,
 		icon = tree_end,
+		lsp = tree_end + #(link_target or content),
 		type = type,
 	}
 end
-
-
-
-
--- local _, to = string.find(line, "^[|%s]*")
--- if to ~= 0 then
--- 	error("to: " .. to);
--- end
--- local pipelessLine = string.sub(line, to + 1, #line)
---
--- if pipelessLine == "" then
--- 	return nil
--- end
---
--- local _, _, node, link = string.find(pipelessLine, "^(.+)@\t%s*%-%->%s*(.+)")
--- if node then
--- 	return {
--- 		dir = curdir,
--- 		icon_col = to,
--- 		name_col = to,
--- 		lsp_col = to + #node,
--- 		node = node,
--- 		extension = vim.fn.fnamemodify(node, ":e"),
--- 		link = link,
--- 		type = M.TYPE_SYMLINK,
--- 	}
--- end
---
--- local _, _, dir = string.find(pipelessLine, "^(.*)/")
--- if dir then
--- 	return {
--- 		dir = curdir,
--- 		icon_col = to,
--- 		name_col = to,
--- 		lsp_col = to + #dir + 1,
--- 		node = dir,
--- 		type = M.TYPE_DIR,
--- 	}
--- end
---
--- local ext = vim.fn.fnamemodify(pipelessLine, ":e")
--- local clean_line = pipelessLine
--- if string.sub(ext, -1) == "*" then
--- 	ext = string.sub(ext, 1, -2)
--- 	clean_line = string.sub(pipelessLine, 1, -2)
--- end
---
--- return {
--- 	current_dir = vim.b.netrw_curdir,
--- 	icon_col = to,
--- 	name_col = to,
--- 	lsp_col = to + #clean_line,
--- 	node = clean_line,
--- 	extension = ext,
--- 	type = M.TYPE_FILE,
--- }
-
--- return {
--- 	name = "name of the file",
--- 	type = "type of the netrw element (dir, file, symlink)"
--- 	path = "full path of the file",
--- 	icon = "character after the | netrw symbol",
--- 	lsp = "two characters after the filename end",
--- }
--- end
 
 ---@param line string
 ---@return PWord|nil

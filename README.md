@@ -7,7 +7,7 @@ An extension plugin for Neovim’s built-in `netrw` file explorer that adds:
 
 ## Features
 
-- No replacement of `netrw` — pure extension
+- No replacement of `netrw` - pure extension
 - File and directory icons inside `netrw`
 - Supports multiple icon providers:
   - `nvim-web-devicons`
@@ -17,7 +17,7 @@ An extension plugin for Neovim’s built-in `netrw` file explorer that adds:
 ## Requirements
 
 - Neovim ≥ 0.9
-- One of the following (optional):
+- One of the following:
   - [`nvim-web-devicons`](https://github.com/nvim-tree/nvim-web-devicons)
   - [`mini.icons`](https://github.com/echasnovski/mini.nvim)
 - Neovim built-in LSP (optional, for diagnostics)
@@ -30,14 +30,18 @@ Using `lazy.nvim`:
 {
   "yourname/netrw-plus.nvim",
   dependencies = {
-    "nvim-tree/nvim-web-devicons", -- or "echasnovski/mini.nvim",       
+    "nvim-tree/nvim-web-devicons", -- or "nvim-mini/mini.icons",       
   },
   config = function()
     require("netrw-plus").setup({
-        prefer = "devicons"
-        file = true,
-        dir = true,
-        lsp = {
+        prefer = "devicons" -- if set to nil will detect automatically
+
+        file = true, -- should display file icons
+	    file_default = true, -- should use default icon for file
+
+        dir = " ", -- directory icon set to false if none
+
+        lsp = { -- which lsp diagnostics to display set lsp = false for none
             info = false,
             hint = false,
             warn = true,
