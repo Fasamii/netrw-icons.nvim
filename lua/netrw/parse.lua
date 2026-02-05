@@ -1,0 +1,185 @@
+local M = {}
+
+M.TYPE_DIR = 0
+M.TYPE_FILE = 1
+M.TYPE_SYMLINK = 2
+
+---@alias Word {dir:string, node:string, link:string|nil, extension:string|nil, type:number, icon_col:number, name_col:number, lsp_col:number}
+
+---@param line string
+---@param curdir string
+---@return Word|nil
+local parse_liststyle_0 = function(line, curdir)
+	local _, _, node, link = string.find(line, "^(.+)@\t%s*%-%->%s*(.+)")
+	if node then
+		return {
+			dir = curdir,
+			icon_col = 0,
+			name_col = 0,
+			lsp_col = #node,
+			node = node,
+			extension = vim.fn.fnamemodify(node, ":e"),
+			link = link,
+			type = M.TYPE_SYMLINK,
+		}
+	end
+
+	local _, _, dir = string.find(line, "^(.*)/")
+	if dir then
+		return {
+			dir = curdir,
+			icon_col = 0,
+			name_col = 0,
+			lsp_col = #dir + 1, -- +1 for the "/"
+			node = dir,
+			type = M.TYPE_DIR,
+		}
+	end
+
+	local ext = vim.fn.fnamemodify(line, ":e")
+	local clean_line = line
+	if string.sub(ext, -1) == "*" then
+		ext = string.sub(ext, 1, -2)
+		clean_line = string.sub(line, 1, -2)
+	end
+
+	return {
+		dir = curdir,
+		icon_col = 0,
+		name_col = 0,
+		lsp_col = #clean_line,
+		node = clean_line,
+		extension = ext,
+		type = M.TYPE_FILE,
+	}
+end
+
+---@param line string
+---@param curdir string
+---@return Word|nil
+local parse_liststyle_1 = function(line, curdir)
+	local _, _, node, link = string.find(line, "^(.+)@%s+")
+	if node then
+		return {
+			dir = curdir,
+			icon_col = 0,
+			name_col = 0,
+			lsp_col = #node,
+			node = node,
+			extension = vim.fn.fnamemodify(node, ":e"),
+			link = link,
+			type = M.TYPE_SYMLINK,
+		}
+	end
+
+	local _, _, dir = string.find(line, "^(.*)/")
+	if dir then
+		return {
+			dir = curdir,
+			icon_col = 0,
+			name_col = 0,
+			lsp_col = #dir + 1,
+			node = dir,
+			type = M.TYPE_DIR,
+		}
+	end
+
+	local file = vim.fn.substitute(line, "^\\(\\%(\\S\\+ \\)*\\S\\+\\).\\{-}$", "\\1", "e")
+	local ext = vim.fn.fnamemodify(file, ":e")
+	if string.sub(ext, -1) == "*" then
+		ext = string.sub(ext, 1, -2)
+		file = string.sub(file, 1, -2)
+	end
+
+	return {
+		dir = curdir,
+		icon_col = 0,
+		name_col = 0,
+		lsp_col = #file,
+		node = file,
+		extension = ext,
+		type = M.TYPE_FILE,
+	}
+end
+
+---@param line string
+---@return Word|nil
+local parse_liststyle_3 = function(line)
+	local curdir = vim.b.netrw_curdir
+	local _, to = string.find(line, "^[|%s]*")
+	local pipelessLine = string.sub(line, to + 1, #line)
+
+	if pipelessLine == "" then
+		return nil
+	end
+
+	local _, _, node, link = string.find(pipelessLine, "^(.+)@\t%s*%-%->%s*(.+)")
+	if node then
+		return {
+			dir = curdir,
+			icon_col = to,
+			name_col = to,
+			lsp_col = to + #node,
+			node = node,
+			extension = vim.fn.fnamemodify(node, ":e"),
+			link = link,
+			type = M.TYPE_SYMLINK,
+		}
+	end
+
+	local _, _, dir = string.find(pipelessLine, "^(.*)/")
+	if dir then
+		return {
+			dir = curdir,
+			icon_col = to,
+			name_col = to,
+			lsp_col = to + #dir + 1,
+			node = dir,
+			type = M.TYPE_DIR,
+		}
+	end
+
+	local ext = vim.fn.fnamemodify(pipelessLine, ":e")
+	local clean_line = pipelessLine
+	if string.sub(ext, -1) == "*" then
+		ext = string.sub(ext, 1, -2)
+		clean_line = string.sub(pipelessLine, 1, -2)
+	end
+
+	return {
+		dir = curdir,
+		icon_col = to,
+		name_col = to,
+		lsp_col = to + #clean_line,
+		node = clean_line,
+		extension = ext,
+		type = M.TYPE_FILE,
+	}
+end
+
+---@param line string
+---@return Word|nil
+M.get_node = function(line)
+	if string.find(line, '^"') then
+		return nil
+	end
+
+	if line == "" then
+		return nil
+	end
+
+	local curdir = vim.b.netrw_curdir
+	local liststyle = vim.b.netrw_liststyle
+
+	if liststyle == 0 then
+		return parse_liststyle_0(line, curdir)
+	elseif liststyle == 1 then
+		return parse_liststyle_1(line, curdir)
+	elseif liststyle == 3 then
+		return parse_liststyle_3(line)
+	end
+
+	return nil
+end
+
+return M
