@@ -7,7 +7,8 @@
 -- https://github.com/prichrd/netrw.nvim
 
 local M = {}
-local parse = require("netrw.parse")
+
+local parse = require("netrw-icons.parse")
 
 local icon_provider = nil
 
@@ -37,42 +38,68 @@ local function get_icon_provider(prefer)
 	return nil
 end
 
-local function get_file_icon(node)
-	if not icon_provider then
-		return nil, nil
-	end
-
-	if icon_provider.type == "devicons" then
-		local icon, hl = icon_provider.provider.get_icon(node.node, nil, { strict = true, default = false })
-		return icon, hl
-	elseif icon_provider.type == "miniicons" then
-		local icon, hl = icon_provider.provider.get("file", node.node)
-		return icon, hl
-	end
-
-	return nil, nil
-end
-
-local function get_lsp_diagnostics(bufnr, node)
-	local diagnostics = {}
-	local filepath = node.dir .. "/" .. node.node
-
-	local diag = vim.diagnostic.get(nil, { path = filepath })
-
-	for _, d in ipairs(diag) do
-		if d.severity == vim.diagnostic.severity.ERROR and M.options.lsp.error then
-			table.insert(diagnostics, { icon = "E", hl = "DiagnosticError" })
-		elseif d.severity == vim.diagnostic.severity.WARN and M.options.lsp.warn then
-			table.insert(diagnostics, { icon = "W", hl = "DiagnosticWarn" })
-		elseif d.severity == vim.diagnostic.severity.INFO and M.options.lsp.info then
-			table.insert(diagnostics, { icon = "I", hl = "DiagnosticInfo" })
-		elseif d.severity == vim.diagnostic.severity.HINT and M.options.lsp.hint then
-			table.insert(diagnostics, { icon = "H", hl = "DiagnosticHint" })
+local function get_icon_from_provider(name)
+	if icon_provider then
+		local provider = icon_provider.provider;
+		local type = icon_provider.type;
+		if type == "devicons" then
+			local symbol, hi = provider.get_icon(name, nil, { strict = true, default = false });
+			if symbol then
+				return { symbol = symbol, hi = hi };
+			end
+		elseif type == "miniicons" then
+			local symbol, hi = provider.get("file", name)
+			if symbol then
+				return { symbol = symbol, hi = hi };
+			end
 		end
 	end
 
-	return diagnostics
+	return nil;
 end
+
+
+local function get_icon(node)
+	if node.type == parse.TYPE_DIR and M.options.dir then
+		if M.options.dir then
+			return { symbol = M.options.dir, hi = "Normal" };
+		end
+	elseif node.type == parse.TYPE_SYMLINK and M.options.sym then
+		if M.options.sym then
+			return { symbol = M.options.sym, hi = "Normal" };
+		end
+	elseif node.type == parse.TYPE_FILE and M.options.file then
+		local file_type = vim.fn.fnamemodify(node.name, ":e");
+		if string.sub(file_type, -1) == "*" then
+			return get_icon_from_provider("exe");
+		end
+		return get_icon_from_provider(node.name);
+	end
+
+	return nil;
+end
+
+-- local function get_lsp_diagnostics(node)
+-- 	local diagnostics = {}
+-- 	local filepath = node.dir .. "/" .. node.node
+--
+-- 	-- FIXME: that foo takes bufnr not path
+-- 	local diag = vim.diagnostic.get(nil, { path = filepath })
+--
+-- 	for _, d in ipairs(diag) do
+-- 		if d.severity == vim.diagnostic.severity.ERROR and M.options.lsp.error then
+-- 			table.insert(diagnostics, { icon = "E", hl = "DiagnosticError" })
+-- 		elseif d.severity == vim.diagnostic.severity.WARN and M.options.lsp.warn then
+-- 			table.insert(diagnostics, { icon = "W", hl = "DiagnosticWarn" })
+-- 		elseif d.severity == vim.diagnostic.severity.INFO and M.options.lsp.info then
+-- 			table.insert(diagnostics, { icon = "I", hl = "DiagnosticInfo" })
+-- 		elseif d.severity == vim.diagnostic.severity.HINT and M.options.lsp.hint then
+-- 			table.insert(diagnostics, { icon = "H", hl = "DiagnosticHint" })
+-- 		end
+-- 	end
+--
+-- 	return diagnostics
+-- end
 
 local function draw(bufnr)
 	local namespace = vim.api.nvim_create_namespace("netrw")
@@ -82,37 +109,18 @@ local function draw(bufnr)
 
 	for i, line in ipairs(lines) do
 		local node = parse.get_node(line)
+
+		-- vim.print("[" .. line .. "] - ");
+		-- vim.print(node);
+
 		if node then
-			-- Draw file/dir icon on the left
-			if (node.type == parse.TYPE_FILE and M.options.file) or
-				(node.type == parse.TYPE_DIR and M.options.dir) then
-				local icon, hl = get_file_icon(node)
-				if icon then
-					local opts = {
-						id = i * 2, -- Unique ID for icon
-						virt_text = hl and { { icon .. " ", hl } } or { { icon .. " " } },
-						virt_text_pos = "inline",
-					}
-					vim.api.nvim_buf_set_extmark(bufnr, namespace, i - 1, node.icon_col, opts)
-				end
-			end
-
-			-- Draw LSP diagnostics on the right
-			if node.type == parse.TYPE_FILE then
-				local diagnostics = get_lsp_diagnostics(bufnr, node)
-				if #diagnostics > 0 then
-					local virt_text = {}
-					for _, diag in ipairs(diagnostics) do
-						table.insert(virt_text, { " " .. diag.icon, diag.hl })
-					end
-
-					local opts = {
-						id = i * 2 + 1, -- Unique ID for LSP
-						virt_text = virt_text,
-						virt_text_pos = "inline",
-					}
-					vim.api.nvim_buf_set_extmark(bufnr, namespace, i - 1, node.lsp_col, opts)
-				end
+			local icon = get_icon(node);
+			if icon then
+				vim.api.nvim_buf_set_extmark(bufnr, namespace, i - 1, node.icon - 1, {
+					id = i,
+					virt_text_pos = "inline",
+					virt_text = { { " " .. icon.symbol, icon.hi } },
+				});
 			end
 		end
 	end
@@ -123,19 +131,10 @@ M.options = {}
 
 --- @class Config
 local default = {
-	-- Preferred icon provider:
-	-- nil         -> auto-detect
-	-- "miniicons" -> use mini.icons
-	-- "devicons"  -> use nvim-web-devicons
 	prefer = nil,
-
-	-- Show icons for files
 	file = true,
-
-	-- Show icons for directories
-	dir = true,
-
-	-- LSP diagnostics integration
+	dir = "",
+	sym = false,
 	lsp = {
 		info = false,
 		hint = false,
@@ -150,15 +149,23 @@ function M.setup(options)
 
 	if M.options.file or M.options.dir then
 		icon_provider = get_icon_provider(M.options.prefer)
+		if not icon_provider then
+			error("No icon provider found");
+		end
 	end
 
-	vim.api.nvim_create_autocmd({ "BufEnter", "DiagnosticChanged" }, {
-		pattern = "*",
-		group = vim.api.nvim_create_augroup("netrw_icons", { clear = true }),
+	vim.api.nvim_create_autocmd("BufModifiedSet", {
+		pattern = { "*" },
+		group = vim.api.nvim_create_augroup("netrw_icons", { clear = false }),
 		callback = function(args)
-			if vim.bo[args.buf].filetype ~= "netrw" then
+			if not (vim.bo and vim.bo.filetype == "netrw") then
 				return
 			end
+
+			if vim.b.netrw_liststyle ~= 0 and vim.b.netrw_liststyle ~= 1 and vim.b.netrw_liststyle ~= 3 then
+				return
+			end
+
 			draw(args.buf)
 		end
 	})

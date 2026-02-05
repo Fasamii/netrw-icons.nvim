@@ -12,11 +12,11 @@ M.TYPE_DIR = 0
 M.TYPE_FILE = 1
 M.TYPE_SYMLINK = 2
 
----@alias Word {dir:string, node:string, link:string|nil, extension:string|nil, type:number, icon_col:number, name_col:number, lsp_col:number}
+---@alias PWord {dir:string, node:string, link:string|nil, extension:string|nil, type:number, icon_col:number, name_col:number, lsp_col:number}
 
 ---@param line string
 ---@param curdir string
----@return Word|nil
+---@return PWord|nil
 local parse_liststyle_0 = function(line, curdir)
 	local _, _, node, link = string.find(line, "^(.+)@\t%s*%-%->%s*(.+)")
 	if node then
@@ -64,7 +64,7 @@ end
 
 ---@param line string
 ---@param curdir string
----@return Word|nil
+---@return PWord|nil
 local parse_liststyle_1 = function(line, curdir)
 	local _, _, node, link = string.find(line, "^(.+)@%s+")
 	if node then
@@ -111,62 +111,102 @@ local parse_liststyle_1 = function(line, curdir)
 end
 
 ---@param line string
----@return Word|nil
+---@return PWord|nil
 local parse_liststyle_3 = function(line)
-	local curdir = vim.b.netrw_curdir
-	local _, to = string.find(line, "^[|%s]*")
-	local pipelessLine = string.sub(line, to + 1, #line)
+	local current_dir = vim.b.netrw_curdir;
+	local type = M.TYPE_FILE;
 
-	if pipelessLine == "" then
-		return nil
+	local _, tree_end = string.find(line, "^[|%s]*");
+
+	local content = string.sub(line, tree_end + 1, #line);
+	if content == "" then
+		return nil;
 	end
 
-	local _, _, node, link = string.find(pipelessLine, "^(.+)@\t%s*%-%->%s*(.+)")
-	if node then
-		return {
-			dir = curdir,
-			icon_col = to,
-			name_col = to,
-			lsp_col = to + #node,
-			node = node,
-			extension = vim.fn.fnamemodify(node, ":e"),
-			link = link,
-			type = M.TYPE_SYMLINK,
-		}
+	local _, _, link, link_target = string.find(content, "^(.+)@\t%s*%-%->%s*(.+)")
+	if link then
+		type = M.TYPE_SYMLINK;
 	end
 
-	local _, _, dir = string.find(pipelessLine, "^(.*)/")
+	local _, _, dir = string.find(content, "^(.*)/")
 	if dir then
-		return {
-			dir = curdir,
-			icon_col = to,
-			name_col = to,
-			lsp_col = to + #dir + 1,
-			node = dir,
-			type = M.TYPE_DIR,
-		}
-	end
-
-	local ext = vim.fn.fnamemodify(pipelessLine, ":e")
-	local clean_line = pipelessLine
-	if string.sub(ext, -1) == "*" then
-		ext = string.sub(ext, 1, -2)
-		clean_line = string.sub(pipelessLine, 1, -2)
+		type = M.TYPE_DIR;
 	end
 
 	return {
-		dir = curdir,
-		icon_col = to,
-		name_col = to,
-		lsp_col = to + #clean_line,
-		node = clean_line,
-		extension = ext,
-		type = M.TYPE_FILE,
+		name = link_target or content,
+		icon = tree_end,
+		type = type,
 	}
 end
 
+
+
+
+-- local _, to = string.find(line, "^[|%s]*")
+-- if to ~= 0 then
+-- 	error("to: " .. to);
+-- end
+-- local pipelessLine = string.sub(line, to + 1, #line)
+--
+-- if pipelessLine == "" then
+-- 	return nil
+-- end
+--
+-- local _, _, node, link = string.find(pipelessLine, "^(.+)@\t%s*%-%->%s*(.+)")
+-- if node then
+-- 	return {
+-- 		dir = curdir,
+-- 		icon_col = to,
+-- 		name_col = to,
+-- 		lsp_col = to + #node,
+-- 		node = node,
+-- 		extension = vim.fn.fnamemodify(node, ":e"),
+-- 		link = link,
+-- 		type = M.TYPE_SYMLINK,
+-- 	}
+-- end
+--
+-- local _, _, dir = string.find(pipelessLine, "^(.*)/")
+-- if dir then
+-- 	return {
+-- 		dir = curdir,
+-- 		icon_col = to,
+-- 		name_col = to,
+-- 		lsp_col = to + #dir + 1,
+-- 		node = dir,
+-- 		type = M.TYPE_DIR,
+-- 	}
+-- end
+--
+-- local ext = vim.fn.fnamemodify(pipelessLine, ":e")
+-- local clean_line = pipelessLine
+-- if string.sub(ext, -1) == "*" then
+-- 	ext = string.sub(ext, 1, -2)
+-- 	clean_line = string.sub(pipelessLine, 1, -2)
+-- end
+--
+-- return {
+-- 	current_dir = vim.b.netrw_curdir,
+-- 	icon_col = to,
+-- 	name_col = to,
+-- 	lsp_col = to + #clean_line,
+-- 	node = clean_line,
+-- 	extension = ext,
+-- 	type = M.TYPE_FILE,
+-- }
+
+-- return {
+-- 	name = "name of the file",
+-- 	type = "type of the netrw element (dir, file, symlink)"
+-- 	path = "full path of the file",
+-- 	icon = "character after the | netrw symbol",
+-- 	lsp = "two characters after the filename end",
+-- }
+-- end
+
 ---@param line string
----@return Word|nil
+---@return PWord|nil
 M.get_node = function(line)
 	if string.find(line, '^"') then
 		return nil
