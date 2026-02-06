@@ -65,16 +65,16 @@ end
 local function get_icon(node)
 	if node.type == parse.TYPE_DIR and M.options.dir then
 		if M.options.dir then
-			return { symbol = M.options.dir, hi = "Directory" };
+			return { symbol = M.options.dir, hi = "netrwDir" };
 		end
 	elseif node.type == parse.TYPE_SYMLINK and M.options.sym then
 		if M.options.sym then
-			return { symbol = M.options.sym, hi = "Question" };
+			return { symbol = M.options.sym, hi = "netrwSymlink" };
 		end
 	elseif node.type == parse.TYPE_FILE and M.options.file then
 		local file_type = vim.fn.fnamemodify(node.name, ":e");
 		if string.sub(file_type, -1) == "*" then
-			return get_icon_from_provider("exe")
+			return get_icon_from_provider("executable")
 		end
 		return get_icon_from_provider(node.name);
 	end
@@ -86,9 +86,9 @@ local function path_to_bufnr(path)
 	path = vim.fn.fnamemodify(path, ":p");
 
 	for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
-		if vim.api.nvim_buf_is_loaded(bufnr) then
-			local name = vim.api.nvim_buf_get_name(bufnr);
-			if name == path then
+		if vim.api.nvim_buf_is_loaded(bufnr) then -- TODO: Load project buffs
+			local buf_path = vim.api.nvim_buf_get_name(bufnr);
+			if buf_path == path then
 				return bufnr;
 			end
 		end
@@ -97,30 +97,65 @@ local function path_to_bufnr(path)
 	return nil
 end
 
-local function get_lsp_diagnostics(node)
-	-- local diagnostics = vim.diagnostic.get(path_to_bufnr(node.path))
+local function get_lsp_diagnostics()
+	local all_diagnostics = vim.diagnostic.get(nil);
+	local diagnostics_map = {};
 
-	-- for _, d in ipairs(diag) do
-	-- 	if d.severity == vim.diagnostic.severity.ERROR and M.options.lsp.error then
-	-- 		table.insert(diagnostics, { icon = "E", hl = "DiagnosticError" })
-	-- 	elseif d.severity == vim.diagnostic.severity.WARN and M.options.lsp.warn then
-	-- 		table.insert(diagnostics, { icon = "W", hl = "DiagnosticWarn" })
-	-- 	elseif d.severity == vim.diagnostic.severity.INFO and M.options.lsp.info then
-	-- 		table.insert(diagnostics, { icon = "I", hl = "DiagnosticInfo" })
-	-- 	elseif d.severity == vim.diagnostic.severity.HINT and M.options.lsp.hint then
-	-- 		table.insert(diagnostics, { icon = "H", hl = "DiagnosticHint" })
-	-- 	end
-	-- end
+	for _, diag in ipairs(all_diagnostics) do
+		local diag_path = vim.api.nvim_buf_get_name(diag.bufnr);
+		diag_path = vim.fn.fnamemodify(diag_path, ":p");
 
-	-- return diagnostics
-	return nil;
+		if not diagnostics_map[diag_path] then
+			diagnostics_map[diag_path] = {
+				info = 0,
+				hint = 0,
+				warn = 0,
+				error = 0,
+			}
+		end
+
+		if diag.severity == vim.diagnostic.severity.ERROR and M.options.lsp.error then
+			diagnostics_map[diag_path].error = diagnostics_map[diag_path].error + 1
+		elseif diag.severity == vim.diagnostic.severity.WARN and M.options.lsp.warn then
+			diagnostics_map[diag_path].warn = diagnostics_map[diag_path].warn + 1
+		elseif diag.severity == vim.diagnostic.severity.INFO and M.options.lsp.info then
+			diagnostics_map[diag_path].info = diagnostics_map[diag_path].info + 1
+		elseif diag.severity == vim.diagnostic.severity.HINT and M.options.lsp.hint then
+			diagnostics_map[diag_path].hint = diagnostics_map[diag_path].hint + 1
+		end
+	end
+
+	return diagnostics_map;
 end
 
+local function format_diagnostic(count, config, hi)
+	if not config then
+		return nil;
+	end
+
+	if count == 0 then
+		return nil;
+	end
+
+	local prefix = "";
+	if type(config) == "string" then
+		prefix = config;
+	end
+
+	return { (prefix .. tostring(count)), hi }
+end
+
+
 local function draw(bufnr)
-	local namespace = vim.api.nvim_create_namespace("netrw")
-	vim.api.nvim_buf_clear_namespace(bufnr, namespace, 0, -1)
+	local namespace_icons = vim.api.nvim_create_namespace("netrw-icons")
+	local namespace_diagnostics = vim.api.nvim_create_namespace("netrw-diagnostics")
 
 	local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+
+	local diagnostics_map = nil;
+	if M.options.lsp then
+		diagnostics_map = get_lsp_diagnostics();
+	end
 
 	for i, line in ipairs(lines) do
 		local node = parse.get_node(line)
@@ -133,22 +168,42 @@ local function draw(bufnr)
 				if icon.hi then
 					virt_text[2] = icon.hi;
 				end
-				vim.api.nvim_buf_set_extmark(bufnr, namespace, i - 1, node.icon, {
+				vim.api.nvim_buf_set_extmark(bufnr, namespace_icons, i - 1, node.icon, {
 					id = i,
 					virt_text_pos = "inline",
 					virt_text = { virt_text },
 				});
 			end
 			if M.options.lsp then
-				local diagnostics = get_lsp_diagnostics(node);
+				local diagnostics = diagnostics_map[node.path];
 				if diagnostics then
-					local virt_text = { " " .. "ERROR" };
+					local virt_text = { { "  " } };
+					local diag_items = {
+						{ count = diagnostics.error, config = M.options.lsp.error, hl = "DiagnosticError" },
+						{ count = diagnostics.warn,  config = M.options.lsp.warn,  hl = "DiagnosticWarn" },
+						{ count = diagnostics.hint,  config = M.options.lsp.hint,  hl = "DiagnosticHint" },
+						{ count = diagnostics.info,  config = M.options.lsp.info,  hl = "DiagnosticInfo" },
+					};
 
-					vim.api.nvim_buf_set_extmark(bufnr, namespace, i - 1, node.lsp, {
-						id = i,
-						virt_text_pos = "inline",
-						virt_text = { virt_text },
-					});
+					local has_diagnostics = false;
+					for _, item in ipairs(diag_items) do
+						local formated = format_diagnostic(item.count, item.config, item.hl);
+						if formated then
+							if has_diagnostics then
+								table.insert(virt_text, { " " });
+							end
+							table.insert(virt_text, formated);
+							has_diagnostics = true;
+						end
+					end
+
+					if has_diagnostics then
+						vim.api.nvim_buf_set_extmark(bufnr, namespace_diagnostics, i - 1, node.lsp, {
+							id = i,
+							virt_text_pos = "inline",
+							virt_text = virt_text,
+						});
+					end
 				end
 			end
 		end
@@ -167,9 +222,9 @@ local default = {
 	sym = false,
 	lsp = {
 		info = false,
-		hint = false,
+		hint = "H-",
 		warn = true,
-		error = true,
+		error = "E-",
 	}
 }
 

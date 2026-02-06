@@ -135,8 +135,9 @@ local parse_liststyle_3 = function(line)
 
 	return {
 		name = link_target or content,
+		path = current_dir .. "/" .. (link_target or content),
 		icon = tree_end,
-		lsp = tree_end + #(link_target or content),
+		lsp = tree_end + #content,
 		type = type,
 	}
 end
