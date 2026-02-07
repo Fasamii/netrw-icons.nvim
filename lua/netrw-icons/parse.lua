@@ -10,7 +10,8 @@ local M = {}
 
 M.TYPE_DIR = 0
 M.TYPE_FILE = 1
-M.TYPE_SYMLINK = 2
+M.TYPE_EXE = 2
+M.TYPE_SYMLINK = 3
 
 ---@alias rwNode{name:string, icon:number, type:number}
 
@@ -125,6 +126,10 @@ local parse_liststyle_3 = function(line)
 
 	local name = content;
 
+	if name:sub(-1) == "*" then
+		type = M.TYPE_EXE;
+	end
+
 	local _, _, link, link_target = string.find(content, "^(.+)@\t%s*%-%->%s*(.+)")
 	if link then
 		type = M.TYPE_SYMLINK;
@@ -138,9 +143,7 @@ local parse_liststyle_3 = function(line)
 
 	return {
 		name = name,
-		-- path = current_dir .. "/" .. name,
 		icon = tree_end,
-		-- lsp = tree_end + #content,
 		type = type,
 	}
 end

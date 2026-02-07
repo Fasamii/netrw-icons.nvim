@@ -1,18 +1,15 @@
 # netrw-icons.nvim
 
-An extension plugin for Neovim’s built-in `netrw` file explorer that adds:
+A lightweight extension for Neovim's built-in `netrw` file explorer that adds file icons without replacing or modifying netrw's core functionality.
 
 - File and directory icons
 - LSP diagnostics indicators
 
 ## Features
 
-- No replacement of `netrw` - pure extension
-- File and directory icons inside `netrw`
-- Supports multiple icon providers:
-  - `nvim-web-devicons`
-  - `mini.icons`
-- LSP diagnostics integration
+- **Icon support**: works with `nvim-web-devicons`, `mini.icons`, or manually specified via config
+- **Customizable**: Override icons per file type or extension
+- **Lightweight**: Minimal performance impact
 
 ## Requirements
 
@@ -20,33 +17,141 @@ An extension plugin for Neovim’s built-in `netrw` file explorer that adds:
 - One of the following:
   - [`nvim-web-devicons`](https://github.com/nvim-tree/nvim-web-devicons)
   - [`mini.icons`](https://github.com/echasnovski/mini.nvim)
-- Neovim built-in LSP (optional, for diagnostics)
+
 
 ## Installation
 
-Using `lazy.nvim`:
+### Using [lazy.nvim](https://github.com/folke/lazy.nvim)
 
 ```lua
 {
-  "yourname/netrw-plus.nvim",
+  "Fasamii/netrw-icons.nvim",
   dependencies = {
-    "nvim-tree/nvim-web-devicons", -- or "nvim-mini/mini.icons",       
+    "nvim-tree/nvim-web-devicons", -- or "echasnovski/mini.icons"
   },
   config = function()
-    require("netrw-plus").setup({
-        prefer = "devicons" -- if set to nil will detect automatically
-
-        file = true, -- should display file icons
-	    file_default = true, -- should use default icon for file
-
-        dir = " ", -- directory icon set to false if none
-
-        lsp = { -- which lsp diagnostics to display set lsp = false for none
-            info = false,
-            hint = false,
-            warn = true,
-            error = true,
-        }
-    })
+    require("netrw-icons").setup()
   end,
 }
+```
+
+### Using [packer.nvim](https://github.com/wbthomason/packer.nvim)
+
+```lua
+use {
+  "Fasamii/netrw-icons.nvim",
+  requires = {
+    "nvim-tree/nvim-web-devicons", -- or "echasnovski/mini.icons"
+  },
+  config = function()
+    require("netrw-icons").setup()
+  end,
+}
+```
+
+### Using [vim-plug](https://github.com/junegunn/vim-plug)
+
+```vim
+Plug 'nvim-tree/nvim-web-devicons' " or 'echasnovski/mini.icons'
+Plug 'Fasamii/netrw-icons.nvim'
+
+" In your init.vim or after plug#end()
+lua require("netrw-icons").setup()
+```
+
+
+## Configuration
+
+### Default Configuration
+
+```lua
+require("netrw-icons").setup({
+  -- Icon provider preference: "devicons", "miniicons", or nil for auto-detect
+  prefer = nil,
+  
+  -- Show generic file icon when no specific icon is found for a file type
+  icon_fallback = true,
+  
+  -- Icon definitions
+  file = { -- If you don't have any overrides you can just set to true
+    -- Custom icons per file extension
+    -- Can be a string (icon only) or a table { icon, highlight_group }
+    -- for example: lua = {"WOAH: ", "Function"},
+    -- or lua = { "WOAH: " },
+
+    -- Reserved keys for special file types
+    dir = " ",  -- Directory icon
+    sym = "",  -- Symlink icon
+    exe = "",  -- Executable icon
+  },
+})
+```
+
+### Configuration Examples
+
+#### Minimal Setup
+
+```lua
+require("netrw-icons").setup()
+```
+
+#### Prefer Specific Icon Provider
+
+```lua
+require("netrw-icons").setup({
+  prefer = "devicons", -- or "miniicons"
+})
+```
+
+#### Custom Icons
+
+```lua
+require("netrw-icons").setup({
+  file = {
+    dir = " ",
+    sym = " ",
+    exe = "EXEHERE: ",
+    
+    -- String format (icon only)
+    lua = "LUA ---->",
+    md = " ",
+    
+    -- Table format (icon + highlight group)
+    ts = { "󰛦 ", "Type" },
+  },
+})
+```
+
+#### Disable Default Icons
+
+```lua
+require("netrw-icons").setup({
+  icon_fallback = false, -- Only show icons for explicitly defined types found by provider or in
+                         -- the file = {} table
+})
+```
+
+#### No Icons (Disable Plugin)
+
+```lua
+require("netrw-icons").setup({
+  file = false, -- Completely disable icons
+})
+```
+
+## Supported Netrw List Styles
+
+Currently, this plugin supports:
+- **Style 3** (tree view): `let g:netrw_liststyle = 3`
+
+To enable tree view in netrw, add to your config:
+
+```vim
+" In init.vim
+let g:netrw_liststyle = 3
+```
+
+```lua
+-- In init.lua
+vim.g.netrw_liststyle = 3
+```
