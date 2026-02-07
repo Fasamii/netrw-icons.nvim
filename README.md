@@ -141,16 +141,18 @@ require("netrw-icons").setup({
 ## Supported Netrw List Styles
 
 Currently, this plugin supports:
-- **Style 3** (tree view): `let g:netrw_liststyle = 3`
+- **Style 0**: `let g:netrw_liststyle = 0`
+- **Style 1**: `let g:netrw_liststyle = 1`
+- **Style 3**: `let g:netrw_liststyle = 3`
 
-To enable tree view in netrw, add to your config:
+To set style of netrw:
 
 ```vim
 " In init.vim
-let g:netrw_liststyle = 3
+let g:netrw_liststyle = 3 " or 0 or 1
 ```
 
 ```lua
 -- In init.lua
-vim.g.netrw_liststyle = 3
+vim.g.netrw_liststyle = 3 -- or 0 or 1
 ```
