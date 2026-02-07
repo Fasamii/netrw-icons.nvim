@@ -139,8 +139,6 @@ local default = {
 		dir = " ",
 		sym = " ",
 		exe = " ",
-
-		py = { "", "Keyword" }
 	},
 }
 

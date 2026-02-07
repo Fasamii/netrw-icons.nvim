@@ -2,8 +2,7 @@
 
 A lightweight extension for Neovim's built-in `netrw` file explorer that adds file icons without replacing or modifying netrw's core functionality.
 
-- File and directory icons
-- LSP diagnostics indicators
+![Example](examples/example.png)
 
 ## Features
 
