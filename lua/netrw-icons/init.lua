@@ -82,50 +82,63 @@ local function get_icon(node)
 	return nil;
 end
 
-local function path_to_bufnr(path)
-	path = vim.fn.fnamemodify(path, ":p");
-
-	for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
-		if vim.api.nvim_buf_is_loaded(bufnr) then -- TODO: Load project buffs
-			local buf_path = vim.api.nvim_buf_get_name(bufnr);
-			if buf_path == path then
-				return bufnr;
-			end
-		end
-	end
-
-	return nil
-end
-
 local function get_lsp_diagnostics()
 	local all_diagnostics = vim.diagnostic.get(nil);
-	local diagnostics_map = {};
+
+	local file_diagnostics_map = {};
+	local dir_diagnostics_map = {};
 
 	for _, diag in ipairs(all_diagnostics) do
 		local diag_path = vim.api.nvim_buf_get_name(diag.bufnr);
 		diag_path = vim.fn.fnamemodify(diag_path, ":p");
 
-		if not diagnostics_map[diag_path] then
-			diagnostics_map[diag_path] = {
-				info = 0,
-				hint = 0,
-				warn = 0,
-				error = 0,
-			}
+		if not file_diagnostics_map[diag_path] then
+			file_diagnostics_map[diag_path] = { info = 0, hint = 0, warn = 0, error = 0 };
 		end
 
 		if diag.severity == vim.diagnostic.severity.ERROR and M.options.lsp.error then
-			diagnostics_map[diag_path].error = diagnostics_map[diag_path].error + 1
+			file_diagnostics_map[diag_path].error = file_diagnostics_map[diag_path].error + 1
 		elseif diag.severity == vim.diagnostic.severity.WARN and M.options.lsp.warn then
-			diagnostics_map[diag_path].warn = diagnostics_map[diag_path].warn + 1
+			file_diagnostics_map[diag_path].warn = file_diagnostics_map[diag_path].warn + 1
 		elseif diag.severity == vim.diagnostic.severity.INFO and M.options.lsp.info then
-			diagnostics_map[diag_path].info = diagnostics_map[diag_path].info + 1
+			file_diagnostics_map[diag_path].info = file_diagnostics_map[diag_path].info + 1
 		elseif diag.severity == vim.diagnostic.severity.HINT and M.options.lsp.hint then
-			diagnostics_map[diag_path].hint = diagnostics_map[diag_path].hint + 1
+			file_diagnostics_map[diag_path].hint = file_diagnostics_map[diag_path].hint + 1
 		end
 	end
 
-	return diagnostics_map;
+	if M.options.lsp_sum_dir then
+		for file_path, counts in pairs(file_diagnostics_map) do
+			file_path = file_path:gsub("/+$", "")
+
+			local dir = file_path:match("(.+)/[^/]+$")
+			while dir do
+				local dir_key = dir .. "/"
+
+				if not dir_diagnostics_map[dir_key] then
+					dir_diagnostics_map[dir_key] = {
+						info = 0,
+						hint = 0,
+						warn = 0,
+						error = 0,
+					}
+				end
+
+				dir_diagnostics_map[dir_key].info  = dir_diagnostics_map[dir_key].info + counts.info
+				dir_diagnostics_map[dir_key].hint  = dir_diagnostics_map[dir_key].hint + counts.hint
+				dir_diagnostics_map[dir_key].warn  = dir_diagnostics_map[dir_key].warn + counts.warn
+				dir_diagnostics_map[dir_key].error = dir_diagnostics_map[dir_key].error + counts.error
+
+				if dir == "/" then
+					break
+				end
+
+				dir = dir:match("(.+)/[^/]+$")
+			end
+		end
+	end
+
+	return file_diagnostics_map, dir_diagnostics_map;
 end
 
 local function format_diagnostic(count, config, hi)
@@ -152,9 +165,9 @@ local function draw(bufnr)
 
 	local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
 
-	local diagnostics_map = nil;
+	local file_diagnostics_map, dir_diagnostics_map = nil, nil;
 	if M.options.lsp then
-		diagnostics_map = get_lsp_diagnostics();
+		file_diagnostics_map, dir_diagnostics_map = get_lsp_diagnostics();
 	end
 
 	for i, line in ipairs(lines) do
@@ -168,6 +181,8 @@ local function draw(bufnr)
 				if icon.hi then
 					virt_text[2] = icon.hi;
 				end
+
+
 				vim.api.nvim_buf_set_extmark(bufnr, namespace_icons, i - 1, node.icon, {
 					id = i,
 					virt_text_pos = "inline",
@@ -175,7 +190,18 @@ local function draw(bufnr)
 				});
 			end
 			if M.options.lsp then
-				local diagnostics = diagnostics_map[node.path];
+				local diagnostics = nil;
+
+				if node.type == parse.TYPE_DIR and M.options.lsp_sum_dir then
+					if dir_diagnostics_map then
+						diagnostics = dir_diagnostics_map[node.path];
+					end
+				else
+					if file_diagnostics_map then
+						diagnostics = file_diagnostics_map[node.path];
+					end
+				end
+
 				if diagnostics then
 					local virt_text = { { "  " } };
 					local diag_items = {
@@ -216,16 +242,21 @@ M.options = {}
 --- @class Config
 local default = {
 	prefer = nil,
-	file = true,
+
+	file = true, -- TODO: Accept table with extension -> icon mapping
 	file_default = true,
+
 	dir = " ",
-	sym = false,
+	sym = " ",
+
 	lsp = {
 		info = false,
-		hint = "H-",
-		warn = true,
+		hint = false,
+		warn = "W-",
 		error = "E-",
-	}
+	},
+
+	lsp_sum_dir = true,
 }
 
 ---@param options Config|nil
@@ -247,7 +278,8 @@ function M.setup(options)
 				return
 			end
 
-			if vim.b.netrw_liststyle ~= 0 and vim.b.netrw_liststyle ~= 1 and vim.b.netrw_liststyle ~= 3 then
+			-- if vim.b.netrw_liststyle ~= 0 and vim.b.netrw_liststyle ~= 1 and vim.b.netrw_liststyle ~= 3 then
+			if vim.b.netrw_liststyle ~= 3 then
 				return
 			end
 
