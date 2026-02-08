@@ -49,31 +49,31 @@ end
 ---@param line string
 ---@return rwNode|nil
 local parse_liststyle_1 = function(line)
-	local current_dir = vim.b.netrw_curdier;
-	local type = M.TYPE_FILE;
+	local node = {};
+	node.type = M.TYPE_FILE;
+	node.icon = 0;
 
-	local name = line:match("^(%S+)")
+	node.name = line:match("^(%S+)")
 
-	if name:sub(-1) == "*" then
-		type = M.TYPE_EXE;
+	if node.name:sub(-1) == "*" then
+		node.type = M.TYPE_EXE;
+		return node;
 	end
 
 	local _, _, link, link_target = string.find(line, "^(.+)@%s+")
 	if link then
-		type = M.TYPE_SYMLINK;
-		name = link_target;
+		node.type = M.TYPE_SYMLINK;
+		node.name = link_target;
+		return node;
 	end
 
 	local _, _, dir = string.find(line, "^(.*)/")
 	if dir then
-		type = M.TYPE_DIR;
+		node.type = M.TYPE_DIR;
+		return node;
 	end
 
-	return {
-		name = name,
-		icon = 0,
-		type = type,
-	}
+	return node;
 end
 
 ---@param line string
