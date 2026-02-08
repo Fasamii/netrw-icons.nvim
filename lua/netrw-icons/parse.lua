@@ -79,38 +79,38 @@ end
 ---@param line string
 ---@return rwNode|nil
 local parse_liststyle_3 = function(line)
-	local current_dir = vim.b.netrw_curdir;
-	local type = M.TYPE_FILE;
+	local node = {};
+	node.type = M.TYPE_FILE;
 
 	local _, tree_end = string.find(line, "^[|%s]*");
+	node.icon = tree_end;
 
 	local content = string.sub(line, tree_end + 1, #line);
 	if content == "" then
 		return nil;
 	end
 
-	local name = content;
+	node.name = content;
 
-	if name:sub(-1) == "*" then
-		type = M.TYPE_EXE;
+	if node.name:sub(-1) == "*" then
+		node.type = M.TYPE_EXE;
+		return node;
 	end
 
 	local _, _, link, link_target = string.find(content, "^(.+)@\t%s*%-%->%s*(.+)")
 	if link then
-		type = M.TYPE_SYMLINK;
-		name = link_target;
+		node.type = M.TYPE_SYMLINK;
+		node.name = link_target;
+		return node;
 	end
 
 	local _, _, dir = string.find(content, "^(.*)/")
 	if dir then
 		type = M.TYPE_DIR;
+		return node;
 	end
 
-	return {
-		name = name,
-		icon = tree_end,
-		type = type,
-	}
+	return node;
 end
 
 ---@param line string
