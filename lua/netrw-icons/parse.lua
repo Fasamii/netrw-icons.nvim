@@ -13,37 +13,36 @@ M.TYPE_FILE = 1
 M.TYPE_EXE = 2
 M.TYPE_SYMLINK = 3
 
----@alias rwNode{name:string, icon:number, type:number}
+---@alias reNode{name:string, icon:number, type:number}
 
 ---@param line string
----@param curdir string
 ---@return rwNode|nil
 local parse_liststyle_0 = function(line)
-	local current_dir = vim.b.netrw_curdir;
-	local type = M.TYPE_FILE;
+	local node = {};
+	node.type = M.TYPE_FILE;
+	node.icon = 0;
 
-	local name = line;
+	node.name = line;
 
-	if name:sub(-1) == "*" then
-		type = M.TYPE_EXE;
+	if node.name:sub(-1) == "*" then
+		node.type = M.TYPE_EXE;
+		return node;
 	end
 
 	local _, _, link, link_target = string.find(line, "^(.+)@\t%s*%-%->%s*(.+)")
 	if link then
-		type = M.TYPE_SYMLINK;
-		name = link_target;
+		node.type = M.TYPE_SYMLINK;
+		node.name = link_target;
+		return node;
 	end
 
 	local _, _, dir = string.find(line, "^(.*)/")
 	if dir then
-		type = M.TYPE_DIR;
+		node.type = M.TYPE_DIR;
+		return node;
 	end
 
-	return {
-		name = name,
-		icon = 0,
-		type = type,
-	}
+	return node;
 end
 
 ---@param line string
