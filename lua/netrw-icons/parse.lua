@@ -19,26 +19,26 @@ M.TYPE_SYMLINK = 3
 ---@return rwNode|nil
 local parse_liststyle_0 = function(line)
 	local node = {};
-	node.type = M.TYPE_FILE;
+	node.node_type = M.TYPE_FILE;
 	node.icon = 0;
 
 	node.name = line;
 
 	if node.name:sub(-1) == "*" then
-		node.type = M.TYPE_EXE;
+		node.node_type = M.TYPE_EXE;
 		return node;
 	end
 
 	local _, _, link, link_target = string.find(line, "^(.+)@\t%s*%-%->%s*(.+)")
 	if link then
-		node.type = M.TYPE_SYMLINK;
+		node.node_type = M.TYPE_SYMLINK;
 		node.name = link_target;
 		return node;
 	end
 
 	local _, _, dir = string.find(line, "^(.*)/")
 	if dir then
-		node.type = M.TYPE_DIR;
+		node.node_type = M.TYPE_DIR;
 		return node;
 	end
 
@@ -49,26 +49,26 @@ end
 ---@return rwNode|nil
 local parse_liststyle_1 = function(line)
 	local node = {};
-	node.type = M.TYPE_FILE;
+	node.node_type = M.TYPE_FILE;
 	node.icon = 0;
 
 	node.name = line:match("^(%S+)")
 
 	if node.name:sub(-1) == "*" then
-		node.type = M.TYPE_EXE;
+		node.node_type = M.TYPE_EXE;
 		return node;
 	end
 
 	local _, _, link, link_target = string.find(line, "^(.+)@%s+")
 	if link then
-		node.type = M.TYPE_SYMLINK;
+		node.node_type = M.TYPE_SYMLINK;
 		node.name = link_target;
 		return node;
 	end
 
 	local _, _, dir = string.find(line, "^(.*)/")
 	if dir then
-		node.type = M.TYPE_DIR;
+		node.node_type = M.TYPE_DIR;
 		return node;
 	end
 
@@ -79,7 +79,7 @@ end
 ---@return rwNode|nil
 local parse_liststyle_3 = function(line)
 	local node = {};
-	node.type = M.TYPE_FILE;
+	node.node_type = M.TYPE_FILE;
 
 	local _, tree_end = string.find(line, "^[|%s]*");
 	node.icon = tree_end;
@@ -92,20 +92,20 @@ local parse_liststyle_3 = function(line)
 	node.name = content;
 
 	if node.name:sub(-1) == "*" then
-		node.type = M.TYPE_EXE;
+		node.node_type = M.TYPE_EXE;
 		return node;
 	end
 
 	local _, _, link, link_target = string.find(content, "^(.+)@\t%s*%-%->%s*(.+)")
 	if link then
-		node.type = M.TYPE_SYMLINK;
+		node.node_type = M.TYPE_SYMLINK;
 		node.name = link_target;
 		return node;
 	end
 
 	local _, _, dir = string.find(content, "^(.*)/")
 	if dir then
-		type = M.TYPE_DIR;
+		node.node_type = M.TYPE_DIR;
 		return node;
 	end
 

@@ -26,13 +26,13 @@ local function get_icon_provider(prefer)
 	end
 
 	if prefer and providers[prefer] then
-		return { type = prefer, provider = providers[prefer] }
+		return { provider_type = prefer, provider = providers[prefer] }
 	end
 
 	if providers.miniicons then
-		return { type = "miniicons", provider = providers.miniicons }
+		return { provider_type = "miniicons", provider = providers.miniicons }
 	elseif providers.devicons then
-		return { type = "devicons", provider = providers.devicons }
+		return { provider_type = "devicons", provider = providers.devicons }
 	end
 
 	return nil
@@ -41,13 +41,13 @@ end
 local function get_icon_from_provider(name)
 	if icon_provider then
 		local provider = icon_provider.provider;
-		local type = icon_provider.type;
-		if type == "devicons" then
+		local provider_type = icon_provider.provider_type;
+		if provider_type == "devicons" then
 			local symbol, hi = provider.get_icon(name, nil, { strict = true, default = M.options.icon_fallback });
 			if symbol then
 				return { symbol = symbol .. " ", hi = hi };
 			end
-		elseif type == "miniicons" then
+		elseif provider_type == "miniicons" then
 			local symbol, hi, is_default = provider.get("file", name)
 			if symbol then
 				if is_default and not M.options.icon_fallback then
@@ -79,11 +79,11 @@ local function get_icon_from_table(name, hi)
 end
 
 local function get_icon(node)
-	if node.type == parse.TYPE_DIR then
+	if node.node_type == parse.TYPE_DIR then
 		return get_icon_from_table("dir", "netrwDir");
-	elseif node.type == parse.TYPE_SYMLINK then
+	elseif node.node_type == parse.TYPE_SYMLINK then
 		return get_icon_from_table("sym", "netrwSymlink");
-	elseif node.type == parse.TYPE_EXE then
+	elseif node.node_type == parse.TYPE_EXE then
 		return get_icon_from_table("exe", "netrwExe");
 	else
 		if M.options.file then
